@@ -297,6 +297,8 @@ let myName = "プレイヤー";
 let roomCode = "";
 let reconnectTimer = null;
 let revealPlaying = false;
+let hasConnected = false;
+let connectTimer = null;
 
 /* ---------- ゲーム状態（ホストが正、ゲストは写し） ---------- */
 let G = null;
@@ -418,6 +420,8 @@ function joinRoom() {
   if (!peerReady()) return;
   if (!/^\d{4}$/.test(code)) { lobbyErr("4桁の数字コードを入力してください"); return; }
   myName = getName(); isHost = false; myIdx = 1; roomCode = code;
+  hasConnected = false;
+  clearTimeout(connectTimer); connectTimer = null;
   lobbyErr("参加中…");
   if (peer) peer.destroy();
   peer = new Peer();
@@ -429,13 +433,24 @@ function joinRoom() {
   peer.on("disconnected", () => { try { peer.reconnect(); } catch(e){} });
 }
 function connectToHost() {
+  clearTimeout(connectTimer);
   conn = peer.connect(PREFIX + roomCode, { reliable: true });
   setupConn();
+  if (!isHost && !hasConnected) {
+    connectTimer = setTimeout(() => {
+      if (conn && conn.open) return;
+      lobbyErr("そのコードのルームに接続できません。ホスト側の画面を開いたまま、コードを確認してください");
+      show("lobby");
+    }, 7000);
+  }
 }
 
 function setupConn() {
   conn.on("open", () => {
+    hasConnected = true;
+    clearTimeout(connectTimer); connectTimer = null;
     banner("");
+    lobbyErr("");
     clearInterval(reconnectTimer); reconnectTimer = null;
     if (isHost) {
       if (!G) {
@@ -453,6 +468,12 @@ function setupConn() {
 }
 function onConnLost() {
   if (G && G.phase === "over" && G.winner !== null) return;
+  if (!hasConnected) {
+    clearTimeout(connectTimer); connectTimer = null;
+    lobbyErr("そのコードのルームが見つからないか、まだ準備中です");
+    show("lobby");
+    return;
+  }
   banner("⚠ 相手との接続が切れました。再接続を待っています…");
   if (!isHost && !reconnectTimer) {
     reconnectTimer = setInterval(() => {
