@@ -289,6 +289,20 @@
    ===================================================== */
 
 const PREFIX = "denki-isu-game-";
+const PEER_OPTIONS = {
+  host: "0.peerjs.com",
+  port: 443,
+  path: "/",
+  secure: true,
+  config: {
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:19302" },
+      { urls: "stun:global.stun.twilio.com:3478" },
+    ],
+  },
+};
 let peer = null;          // 自分のPeer
 let conn = null;          // 相手とのDataConnection
 let isHost = false;
@@ -299,6 +313,7 @@ let reconnectTimer = null;
 let revealPlaying = false;
 let hasConnected = false;
 let connectTimer = null;
+let connectAttempts = 0;
 
 /* ---------- ゲーム状態（ホストが正、ゲストは写し） ---------- */
 let G = null;
@@ -389,6 +404,9 @@ function peerReady() {
   lobbyErr("通信ライブラリの読み込みに失敗しました。ページを再読み込みしてください");
   return false;
 }
+function makePeer(id) {
+  return id ? new Peer(id, PEER_OPTIONS) : new Peer(PEER_OPTIONS);
+}
 
 function createRoom(tries) {
   tries = tries || 0;
@@ -398,7 +416,7 @@ function createRoom(tries) {
   roomCode = String(Math.floor(1000 + Math.random() * 9000));
   lobbyErr("");
   if (peer) peer.destroy();
-  peer = new Peer(PREFIX + roomCode);
+  peer = makePeer(PREFIX + roomCode);
   peer.on("open", () => {
     document.getElementById("wait-code").textContent = roomCode;
     show("wait");
@@ -421,11 +439,28 @@ function joinRoom() {
   if (!/^\d{4}$/.test(code)) { lobbyErr("4桁の数字コードを入力してください"); return; }
   myName = getName(); isHost = false; myIdx = 1; roomCode = code;
   hasConnected = false;
+  connectAttempts = 0;
   clearTimeout(connectTimer); connectTimer = null;
+  clearInterval(reconnectTimer); reconnectTimer = null;
   lobbyErr("参加中…");
   if (peer) peer.destroy();
-  peer = new Peer();
-  peer.on("open", () => connectToHost());
+  peer = makePeer();
+  peer.on("open", () => {
+    connectToHost();
+    reconnectTimer = setInterval(() => {
+      if (hasConnected || (conn && conn.open)) {
+        clearInterval(reconnectTimer); reconnectTimer = null;
+        return;
+      }
+      connectToHost();
+    }, 2500);
+    connectTimer = setTimeout(() => {
+      if (hasConnected || (conn && conn.open)) return;
+      clearInterval(reconnectTimer); reconnectTimer = null;
+      lobbyErr("そのコードのルームに接続できません。ホスト側の画面を開いたまま、コードを確認してください");
+      show("lobby");
+    }, 15000);
+  });
   peer.on("error", (e) => {
     if (e.type === "peer-unavailable") lobbyErr("そのコードのルームが見つかりません");
     else if (e.type === "network" || e.type === "server-error") lobbyErr("接続サーバーに繋がりません。通信環境を確認してください");
@@ -433,16 +468,10 @@ function joinRoom() {
   peer.on("disconnected", () => { try { peer.reconnect(); } catch(e){} });
 }
 function connectToHost() {
-  clearTimeout(connectTimer);
+  connectAttempts++;
+  lobbyErr("参加中… 接続を試しています（" + connectAttempts + "回目）");
   conn = peer.connect(PREFIX + roomCode, { reliable: true });
   setupConn();
-  if (!isHost && !hasConnected) {
-    connectTimer = setTimeout(() => {
-      if (conn && conn.open) return;
-      lobbyErr("そのコードのルームに接続できません。ホスト側の画面を開いたまま、コードを確認してください");
-      show("lobby");
-    }, 7000);
-  }
 }
 
 function setupConn() {
@@ -469,9 +498,6 @@ function setupConn() {
 function onConnLost() {
   if (G && G.phase === "over" && G.winner !== null) return;
   if (!hasConnected) {
-    clearTimeout(connectTimer); connectTimer = null;
-    lobbyErr("そのコードのルームが見つからないか、まだ準備中です");
-    show("lobby");
     return;
   }
   banner("⚠ 相手との接続が切れました。再接続を待っています…");
