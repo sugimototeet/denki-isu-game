@@ -382,9 +382,15 @@ function getName() {
   return v || "プレイヤー";
 }
 function lobbyErr(msg) { document.getElementById("lobby-err").textContent = msg; }
+function peerReady() {
+  if (typeof Peer !== "undefined") return true;
+  lobbyErr("通信ライブラリの読み込みに失敗しました。ページを再読み込みしてください");
+  return false;
+}
 
 function createRoom(tries) {
   tries = tries || 0;
+  if (!peerReady()) return;
   if (tries > 5) { lobbyErr("ルーム作成に失敗しました。時間をおいて再試行してください"); return; }
   myName = getName(); isHost = true; myIdx = 0;
   roomCode = String(Math.floor(1000 + Math.random() * 9000));
@@ -409,6 +415,7 @@ function createRoom(tries) {
 
 function joinRoom() {
   const code = document.getElementById("join-code").value.trim();
+  if (!peerReady()) return;
   if (!/^\d{4}$/.test(code)) { lobbyErr("4桁の数字コードを入力してください"); return; }
   myName = getName(); isHost = false; myIdx = 1; roomCode = code;
   lobbyErr("参加中…");
@@ -833,6 +840,10 @@ function tapRematch() {
 }
 
 /* ---------- 初期化 ---------- */
+window.createRoom = createRoom;
+window.joinRoom = joinRoom;
+window.tapNext = tapNext;
+window.tapRematch = tapRematch;
 buildChairs();
 </script>
 </body>
