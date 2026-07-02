@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>電気イスゲーム オンライン</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+<title>電気イスゲーム</title>
 <style>
   :root {
     --gold: #f5c542;
@@ -33,7 +32,7 @@
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     margin-bottom: 4px;
   }
-  .sub { color: #999; letter-spacing: 0.28em; font-size: 12px; margin-bottom: 28px; }
+  .sub { color: #999; letter-spacing: 0.28em; font-size: 12px; margin-bottom: 24px; }
 
   button.btn {
     font-family: inherit; font-weight: 700; font-size: 17px;
@@ -48,30 +47,26 @@
     background: linear-gradient(180deg, #ff8899, var(--danger) 60%, #aa1133);
     color: #fff; box-shadow: 0 4px 18px rgba(255,51,85,0.35);
   }
-  button.btn.ghost {
-    background: transparent; border: 1px solid #666; color: #ccc; box-shadow: none;
-  }
 
   /* ===== ロビー ===== */
-  .field { margin-bottom: 16px; }
+  .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 12px; color: #aaa; margin-bottom: 5px; }
   .field input {
     background: #1e1e33; border: 1px solid #444; border-radius: 10px;
     color: #fff; font-size: 18px; padding: 11px 14px; width: 230px; text-align: center;
   }
-  #join-code { letter-spacing: 0.4em; font-size: 24px; width: 180px; }
-  .lobby-btns { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; align-items: center; }
-  .divider { color: #555; font-size: 12px; margin: 6px 0; }
-  .err { color: var(--danger); font-size: 13px; min-height: 18px; margin-top: 12px; }
-
-  /* ===== 待機 ===== */
-  #wait .code-big {
-    font-size: 64px; font-weight: 900; letter-spacing: 0.25em; color: var(--gold);
-    text-shadow: 0 0 30px rgba(245,197,66,0.4); margin: 14px 0 6px;
+  .rules {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 12px 18px; margin: 10px 0 22px;
+    font-size: 12px; line-height: 1.9; color: #ccc; text-align: left; max-width: 420px;
   }
-  #wait .hint { color: #aaa; font-size: 14px; line-height: 1.9; margin-bottom: 26px; }
-  .dots::after { content: ""; animation: dots 1.5s steps(4) infinite; }
-  @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+  .rules b { color: var(--gold); }
+
+  /* ===== 受け渡し ===== */
+  #handover { background: #050508; z-index: 40; }
+  #handover .ho-emoji { font-size: clamp(50px, 18vw, 90px); margin-bottom: 14px; }
+  #handover .big { font-size: clamp(20px, 6.4vw, 32px); font-weight: 900; margin-bottom: 10px; line-height: 1.5; }
+  #handover .warn { color: var(--danger); font-weight: 700; font-size: 16px; margin-bottom: 36px; }
 
   /* ===== ゲーム ===== */
   #game { justify-content: flex-start; padding: 8px 8px 12px; }
@@ -123,7 +118,6 @@
     transform: translate(-50%, -50%) scale(1.14);
   }
   .chair.gone { opacity: 0.15; cursor: default; filter: grayscale(1); }
-  .chair.disabled { cursor: default; }
   .chair.zap {
     border-color: var(--danger);
     background: linear-gradient(180deg, #5a1020, #30060f);
@@ -189,7 +183,6 @@
   #winner .w-name { font-size: clamp(26px, 9vw, 46px); font-weight: 900; color: var(--gold); margin: 10px 0; }
   #winner .w-why { color: #bbb; font-size: 15px; margin-bottom: 10px; }
   #winner .w-final { color: #888; font-size: 13px; margin-bottom: 30px; line-height: 1.9; }
-  #winner .w-wait { color: #888; font-size: 13px; margin-top: 14px; min-height: 18px; }
 
   .float-pt {
     position: absolute; z-index: 45; font-size: 30px; font-weight: 900; color: var(--safe);
@@ -197,43 +190,39 @@
     animation: floatUp 1.4s forwards;
   }
   @keyframes floatUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-80px); } }
-
-  #banner {
-    position: absolute; top: 0; left: 0; right: 0; z-index: 70;
-    background: var(--danger); color: #fff; font-size: 13px; font-weight: 700;
-    padding: 8px 12px; text-align: center; display: none;
-  }
-  #banner.active { display: block; }
 </style>
 </head>
 <body>
 
-<!-- ===== ロビー ===== -->
+<!-- ===== タイトル ===== -->
 <div id="lobby" class="screen active">
   <h1 class="logo">⚡ 電気イスゲーム ⚡</h1>
-  <div class="sub">ELECTRIC CHAIR GAME ONLINE</div>
+  <div class="sub">ELECTRIC CHAIR GAME</div>
   <div class="field">
-    <label>あなたの名前</label>
-    <input id="my-name" maxlength="8" value="プレイヤー">
+    <label>プレイヤー1（先に座る側）</label>
+    <input id="name1" maxlength="8" value="プレイヤー1">
   </div>
-  <div class="lobby-btns">
-    <button class="btn" onclick="createRoom()">🏠 ルーム作成</button>
-    <div class="divider">─── または ───</div>
-    <div class="field">
-      <label>ルームコード（4桁）</label>
-      <input id="join-code" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0000">
-    </div>
-    <button class="btn ghost" onclick="joinRoom()">🚪 ルームに参加</button>
+  <div class="field">
+    <label>プレイヤー2</label>
+    <input id="name2" maxlength="8" value="プレイヤー2">
   </div>
-  <div class="err" id="lobby-err"></div>
+  <div class="rules">
+    <b>ルール</b><br>
+    ・1台のスマホを交代で使います<br>
+    ・仕掛ける側がこっそり<b>電流をセット</b> → 座る側が1脚選んで着席<br>
+    ・セーフなら<b>椅子の番号＝得点</b>、その椅子は撤去<br>
+    ・感電は得点なし（椅子は残る）。<b>3回感電で負け</b><br>
+    ・先に<b>合計40点</b>で勝ち。毎ラウンド攻守交代
+  </div>
+  <button class="btn" onclick="startGame()">ゲームスタート</button>
 </div>
 
-<!-- ===== ホスト待機 ===== -->
-<div id="wait" class="screen">
-  <div style="color:#aaa;font-size:14px;">ルームコード</div>
-  <div class="code-big" id="wait-code">0000</div>
-  <div class="hint">このコードを相手に伝えてください<br>（LINEなどで送信OK）</div>
-  <div style="font-size:16px;color:var(--gold);font-weight:700;" class="dots">相手の参加を待っています</div>
+<!-- ===== 受け渡し ===== -->
+<div id="handover" class="screen">
+  <div class="ho-emoji" id="ho-emoji">📱</div>
+  <div class="big" id="ho-title"></div>
+  <div class="warn" id="ho-warn"></div>
+  <button class="btn" id="ho-btn">準備OK</button>
 </div>
 
 <!-- ===== ゲーム ===== -->
@@ -247,8 +236,7 @@
     </div>
   </div>
   <div class="action-area">
-    <button class="btn" id="confirm-btn" style="display:none;"></button>
-    <div id="wait-msg" style="color:#aaa;font-size:14px;display:none;" class="dots"></div>
+    <button class="btn" id="confirm-btn" disabled></button>
   </div>
 </div>
 
@@ -264,7 +252,7 @@
   <div class="r-emoji" id="r-emoji"></div>
   <div class="r-title" id="r-title"></div>
   <div class="r-detail" id="r-detail"></div>
-  <button class="btn" id="r-btn" onclick="tapNext()">次へ ▶</button>
+  <button class="btn" id="r-btn" onclick="nextTurn()">次へ ▶</button>
 </div>
 
 <!-- ===== 勝敗 ===== -->
@@ -273,50 +261,22 @@
   <div class="w-name" id="w-name"></div>
   <div class="w-why" id="w-why"></div>
   <div class="w-final" id="w-final"></div>
-  <button class="btn" onclick="tapRematch()">🔁 もう一度対戦</button>
-  <div class="w-wait" id="w-wait"></div>
+  <button class="btn" onclick="rematch()">🔁 もう一度対戦</button>
 </div>
-
-<div id="banner"></div>
 
 <script>
 "use strict";
 /* =====================================================
-   電気イスゲーム オンライン
-   - PeerJS (無料公開サーバー / 登録不要) による2台P2P対戦
-   - ホスト(ルーム作成者)がゲーム状態を一元管理
-   - ゲスト切断時は同コードで自動再接続 → 状態復元
+   電気イスゲーム（1台交代制 / パス＆プレイ）
+   - 通信なし。スマホ・iPad 1台を交互に受け渡して対戦
+   - 電流セットは受け渡し画面で完全に隠す
    ===================================================== */
 
-const PREFIX = "denki-isu-game-";
-const PEER_OPTIONS = {
-  host: "0.peerjs.com",
-  port: 443,
-  path: "/",
-  secure: true,
-  config: {
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:stun2.l.google.com:19302" },
-      { urls: "stun:global.stun.twilio.com:3478" },
-    ],
-  },
-};
-let peer = null;          // 自分のPeer
-let conn = null;          // 相手とのDataConnection
-let isHost = false;
-let myIdx = 0;            // 自分のプレイヤー番号 (host=0, guest=1)
-let myName = "プレイヤー";
-let roomCode = "";
-let reconnectTimer = null;
-let revealPlaying = false;
-let hasConnected = false;
-let connectTimer = null;
-let connectAttempts = 0;
+/* ---------- 状態 ---------- */
+let G = null;       // ゲーム状態
+let trap = null;    // 現ラウンドの電流位置
+let picked = null;  // 選択中の椅子
 
-/* ---------- ゲーム状態（ホストが正、ゲストは写し） ---------- */
-let G = null;
 function newGame(n0, n1) {
   return {
     players: [
@@ -325,14 +285,14 @@ function newGame(n0, n1) {
     ],
     chairs: Object.fromEntries(Array.from({length:12}, (_,i)=>[i+1,true])),
     round: 1,
-    sitter: 0,            // 座る側 index（R1はホスト）
+    sitter: 0,            // 座る側 index
     phase: "set",         // set | sit | reveal | over
-    lastReveal: null,     // {chair, trap, outcome, sitter}
+    lastReveal: null,
     winner: null, winWhy: "",
   };
 }
-// ゲストに送る際、電流位置(trap)は状態に含めない（ホストのローカル変数）
-let hostTrap = null;
+function sitterP() { return G.players[G.sitter]; }
+function setterP() { return G.players[1 - G.sitter]; }
 
 /* ---------- サウンド ---------- */
 let AC = null;
@@ -377,7 +337,7 @@ function sndZap() {
 }
 function sndFanfare() { [523,659,784,1047].forEach((f,i)=>beep(f,0.35,"triangle",0.25,i*0.16)); }
 
-/* ---------- バイブ（Android対応 / iPhone非対応） ---------- */
+/* ---------- バイブ（Android対応 / iPhone・iPad非対応） ---------- */
 function vib(p) { if (navigator.vibrate) try { navigator.vibrate(p); } catch(e){} }
 
 /* ---------- 画面 ---------- */
@@ -385,192 +345,88 @@ function show(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
-function banner(msg) {
-  const b = document.getElementById("banner");
-  if (msg) { b.textContent = msg; b.classList.add("active"); }
-  else b.classList.remove("active");
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* =====================================================
+   開始・受け渡し
+   ===================================================== */
+function startGame() {
+  try { ac().resume(); } catch(e){}
+  const n1 = document.getElementById("name1").value.trim() || "プレイヤー1";
+  const n2 = document.getElementById("name2").value.trim() || "プレイヤー2";
+  G = newGame(n1, n2);
+  trap = null;
+  buildChairs();
+  toSetPhase();
+}
+
+function handover(emoji, title, warn, cb) {
+  document.getElementById("ho-emoji").textContent = emoji;
+  document.getElementById("ho-title").textContent = title;
+  document.getElementById("ho-warn").textContent = warn;
+  document.getElementById("ho-btn").onclick = cb;
+  show("handover");
 }
 
 /* =====================================================
-   接続まわり
+   フェーズ進行
    ===================================================== */
-function getName() {
-  const v = document.getElementById("my-name").value.trim();
-  return v || "プレイヤー";
-}
-function lobbyErr(msg) { document.getElementById("lobby-err").textContent = msg; }
-function peerReady() {
-  if (typeof Peer !== "undefined") return true;
-  lobbyErr("通信ライブラリの読み込みに失敗しました。ページを再読み込みしてください");
-  return false;
-}
-function makePeer(id) {
-  return id ? new Peer(id, PEER_OPTIONS) : new Peer(PEER_OPTIONS);
-}
-
-function createRoom(tries) {
-  tries = tries || 0;
-  if (!peerReady()) return;
-  if (tries > 5) { lobbyErr("ルーム作成に失敗しました。時間をおいて再試行してください"); return; }
-  myName = getName(); isHost = true; myIdx = 0;
-  roomCode = String(Math.floor(1000 + Math.random() * 9000));
-  lobbyErr("");
-  if (peer) peer.destroy();
-  peer = makePeer(PREFIX + roomCode);
-  peer.on("open", () => {
-    document.getElementById("wait-code").textContent = roomCode;
-    show("wait");
-  });
-  peer.on("error", (e) => {
-    if (e.type === "unavailable-id") createRoom(tries + 1);  // コード衝突→再生成
-    else if (e.type === "network" || e.type === "server-error") lobbyErr("接続サーバーに繋がりません。通信環境を確認してください");
-  });
-  peer.on("disconnected", () => { try { peer.reconnect(); } catch(e){} });
-  peer.on("connection", (c) => {
-    if (conn && conn.open) { c.close(); return; }  // 3人目以降は拒否
-    conn = c;
-    setupConn();
-  });
-}
-
-function joinRoom() {
-  const code = document.getElementById("join-code").value.trim();
-  if (!peerReady()) return;
-  if (!/^\d{4}$/.test(code)) { lobbyErr("4桁の数字コードを入力してください"); return; }
-  myName = getName(); isHost = false; myIdx = 1; roomCode = code;
-  hasConnected = false;
-  connectAttempts = 0;
-  clearTimeout(connectTimer); connectTimer = null;
-  clearInterval(reconnectTimer); reconnectTimer = null;
-  lobbyErr("参加中…");
-  if (peer) peer.destroy();
-  peer = makePeer();
-  peer.on("open", () => {
-    connectToHost();
-    reconnectTimer = setInterval(() => {
-      if (hasConnected || (conn && conn.open)) {
-        clearInterval(reconnectTimer); reconnectTimer = null;
-        return;
-      }
-      connectToHost();
-    }, 2500);
-    connectTimer = setTimeout(() => {
-      if (hasConnected || (conn && conn.open)) return;
-      clearInterval(reconnectTimer); reconnectTimer = null;
-      lobbyErr("そのコードのルームに接続できません。ホスト側の画面を開いたまま、コードを確認してください");
-      show("lobby");
-    }, 15000);
-  });
-  peer.on("error", (e) => {
-    if (e.type === "peer-unavailable") lobbyErr("そのコードのルームが見つかりません");
-    else if (e.type === "network" || e.type === "server-error") lobbyErr("接続サーバーに繋がりません。通信環境を確認してください");
-  });
-  peer.on("disconnected", () => { try { peer.reconnect(); } catch(e){} });
-}
-function connectToHost() {
-  connectAttempts++;
-  lobbyErr("参加中… 接続を試しています（" + connectAttempts + "回目）");
-  conn = peer.connect(PREFIX + roomCode, { reliable: true });
-  setupConn();
-}
-
-function setupConn() {
-  conn.on("open", () => {
-    hasConnected = true;
-    clearTimeout(connectTimer); connectTimer = null;
-    banner("");
-    lobbyErr("");
-    clearInterval(reconnectTimer); reconnectTimer = null;
-    if (isHost) {
-      if (!G) {
-        // 初参加：名前が来るのを待つ（helloで開始）
-      } else {
-        sendState();  // 再接続：状態を復元送信
-      }
-    } else {
-      send({ t: "hello", name: myName });
+function toSetPhase() {
+  G.phase = "set"; picked = null; trap = null;
+  handover(
+    "🎯",
+    setterP().name + " さんに\nスマホを渡してください".replace("\n",""),
+    "🙈 " + sitterP().name + " さんは絶対に見ないで！",
+    () => {
+      show("game");
+      document.getElementById("phase-title").textContent = "🎯 電流セット";
+      document.getElementById("phase-desc").textContent = setterP().name + " さん、電流を仕掛ける椅子をこっそり選んでください";
+      const b = document.getElementById("confirm-btn");
+      b.textContent = "この椅子に電流をセット";
+      b.className = "btn red";
+      b.disabled = true;
+      b.onclick = confirmTrap;
+      renderAll(); refreshChairs();
     }
-  });
-  conn.on("data", handleMsg);
-  conn.on("close", onConnLost);
-  conn.on("error", onConnLost);
+  );
 }
-function onConnLost() {
-  if (G && G.phase === "over" && G.winner !== null) return;
-  if (!hasConnected) {
-    return;
-  }
-  banner("⚠ 相手との接続が切れました。再接続を待っています…");
-  if (!isHost && !reconnectTimer) {
-    reconnectTimer = setInterval(() => {
-      if (conn && conn.open) { clearInterval(reconnectTimer); reconnectTimer = null; return; }
-      try { connectToHost(); } catch(e){}
-    }, 3000);
-  }
+
+function toSitPhase() {
+  G.phase = "sit"; picked = null;
+  handover(
+    "🪑",
+    sitterP().name + " さんにスマホを渡してください",
+    "⚡ 電流はもうセットされています…",
+    () => {
+      show("game");
+      document.getElementById("phase-title").textContent = "🪑 着席チャレンジ";
+      document.getElementById("phase-desc").textContent = sitterP().name + " さん、座る椅子を選んでください。数字が大きいほどハイリターン！";
+      const b = document.getElementById("confirm-btn");
+      b.textContent = "この椅子に座る！";
+      b.className = "btn";
+      b.disabled = true;
+      b.onclick = confirmSit;
+      renderAll(); refreshChairs();
+    }
+  );
 }
-function send(obj) { if (conn && conn.open) conn.send(obj); }
 
-/* ゲストへ送る状態（trapは含まれない構造なのでそのまま） */
-function sendState() { send({ t: "state", g: G }); }
-
-/* =====================================================
-   メッセージ処理
-   ===================================================== */
-function handleMsg(m) {
-  if (!m || !m.t) return;
-  if (isHost) {
-    switch (m.t) {
-      case "hello":
-        if (!G) {
-          G = newGame(myName, m.name || "プレイヤー2");
-          hostTrap = null;
-        } else {
-          G.players[1].name = m.name || G.players[1].name;  // 再接続
-        }
-        sendState();
-        enterPhase();
-        break;
-      case "setTrap":
-        if (G.phase === "set" && G.sitter === 0 && G.chairs[m.chair]) {
-          hostTrap = m.chair;
-          G.phase = "sit";
-          sendState(); enterPhase();
-        }
-        break;
-      case "sit":
-        if (G.phase === "sit" && G.sitter === 1 && G.chairs[m.chair]) hostResolveSit(m.chair);
-        break;
-      case "next":  hostNext(); break;
-      case "rematch": hostRematch(); break;
-    }
-  } else {
-    switch (m.t) {
-      case "state":
-        G = m.g;
-        if (G.phase === "over") { showWinner(); break; }
-        if (!revealPlaying) {
-          if (G.phase === "reveal" && G.lastReveal) { show("game"); renderAll(); showResultCard(); }
-          else enterPhase();
-        }
-        break;
-      case "reveal":
-        G = m.g;
-        playReveal(m.chair, m.trap, m.outcome);
-        break;
-      case "gameover":
-        G = m.g;
-        finishOrWinner();
-        break;
-    }
-  }
+function confirmTrap() {
+  if (picked == null) return;
+  trap = picked;
+  toSitPhase();
+}
+function confirmSit() {
+  if (picked == null) return;
+  resolveSit(picked);
 }
 
 /* =====================================================
-   ホスト側ゲーム進行ロジック
+   判定
    ===================================================== */
-function hostResolveSit(chair) {
-  const outcome = (chair === hostTrap) ? "zap" : "safe";
-  const s = G.players[G.sitter];
+function resolveSit(chair) {
+  const outcome = (chair === trap) ? "zap" : "safe";
+  const s = sitterP();
   if (outcome === "zap") {
     s.shocks++;
     s.hist[G.round] = "zap";
@@ -581,14 +437,13 @@ function hostResolveSit(chair) {
     G.chairs[chair] = false;
   }
   G.phase = "reveal";
-  G.lastReveal = { chair, trap: hostTrap, outcome, sitter: G.sitter };
-  send({ t: "reveal", g: G, chair, trap: hostTrap, outcome });
-  playReveal(chair, hostTrap, outcome);
+  G.lastReveal = { chair, trap, outcome, sitter: G.sitter };
+  playReveal(chair, outcome);
 }
 
-function hostNext() {
-  if (G.phase !== "reveal") return;
-  const p = G.players, s = p[G.sitter];
+function nextTurn() {
+  document.getElementById("result").classList.remove("active");
+  const p = G.players, s = sitterP();
   let win = null, why = "";
   if (s.score >= 40) { win = G.sitter; why = "40点先取！"; }
   else if (s.shocks >= 3) { win = 1 - G.sitter; why = "相手を3回感電させた！"; }
@@ -598,88 +453,18 @@ function hostNext() {
   }
   if (win !== null) {
     G.phase = "over"; G.winner = win; G.winWhy = why;
-    send({ t: "gameover", g: G });
-    finishOrWinner();
+    showWinner();
     return;
   }
   G.sitter = 1 - G.sitter;
   G.round++;
-  G.phase = "set";
   G.lastReveal = null;
-  hostTrap = null;
-  sendState();
-  enterPhase();
-}
-
-function hostRematch() {
-  const n0 = G.players[0].name, n1 = G.players[1].name;
-  G = newGame(n0, n1);
-  hostTrap = null;
-  sendState();
-  enterPhase();
+  toSetPhase();
 }
 
 /* =====================================================
-   共通UI：フェーズ表示
+   椅子・スコアボード描画
    ===================================================== */
-function me() { return G.players[myIdx]; }
-function opp() { return G.players[1 - myIdx]; }
-function amSitter() { return G.sitter === myIdx; }
-
-let picked = null;
-
-function enterPhase() {
-  if (!G) return;
-  if (G.phase === "over") { showWinner(); return; }
-  picked = null;
-  document.getElementById("result").classList.remove("active");
-  document.getElementById("suspense").classList.remove("active");
-  show("game");
-  renderAll();
-
-  const btn = document.getElementById("confirm-btn");
-  const wmsg = document.getElementById("wait-msg");
-  const title = document.getElementById("phase-title");
-  const desc = document.getElementById("phase-desc");
-  const myTurn = (G.phase === "set" && !amSitter()) || (G.phase === "sit" && amSitter());
-
-  if (G.phase === "set") {
-    if (myTurn) {
-      title.textContent = "🎯 電流セット";
-      desc.textContent = "電流を仕掛ける椅子を選んでください（相手には見えません）";
-      btn.textContent = "この椅子に電流をセット";
-      btn.className = "btn red";
-      btn.style.display = ""; btn.disabled = true;
-      btn.onclick = confirmTrap;
-      wmsg.style.display = "none";
-    } else {
-      title.textContent = "🪑 あなたが座る番";
-      desc.textContent = opp().name + " が電流をセット中…";
-      btn.style.display = "none";
-      wmsg.textContent = "相手が電流をセットしています";
-      wmsg.style.display = "";
-    }
-  } else if (G.phase === "sit") {
-    if (myTurn) {
-      title.textContent = "🪑 着席チャレンジ";
-      desc.textContent = "座る椅子を選んでください。数字が大きいほどハイリターン！";
-      btn.textContent = "この椅子に座る！";
-      btn.className = "btn";
-      btn.style.display = ""; btn.disabled = true;
-      btn.onclick = confirmSit;
-      wmsg.style.display = "none";
-    } else {
-      title.textContent = "🎯 電流セット完了";
-      desc.textContent = opp().name + " が椅子を選んでいます…";
-      btn.style.display = "none";
-      wmsg.textContent = "相手が椅子を選んでいます";
-      wmsg.style.display = "";
-    }
-  }
-  refreshChairs(!myTurn);
-}
-
-/* ---------- 椅子 ---------- */
 let chairsBuilt = false;
 function buildChairs() {
   if (chairsBuilt) return;
@@ -688,7 +473,7 @@ function buildChairs() {
   for (let i = 1; i <= 12; i++) {
     const el = document.createElement("div");
     el.className = "chair"; el.id = "chair" + i;
-    const ang = (i % 12) * 30 - 90;
+    const ang = (i % 12) * 30 - 90;   // 時計配置：12が真上
     const r = 42;
     el.style.left = (50 + r * Math.cos(ang * Math.PI / 180)) + "%";
     el.style.top = (50 + r * Math.sin(ang * Math.PI / 180)) + "%";
@@ -697,43 +482,23 @@ function buildChairs() {
     wrap.appendChild(el);
   }
 }
-function refreshChairs(disabled) {
+function refreshChairs() {
   for (let i = 1; i <= 12; i++) {
     const el = document.getElementById("chair" + i);
     el.classList.toggle("gone", !G.chairs[i]);
     el.classList.toggle("selected", picked === i);
-    el.classList.toggle("disabled", !!disabled);
     el.classList.remove("zap", "ok");
   }
 }
 function pickChair(i) {
   if (!G || !G.chairs[i]) return;
-  const myTurn = (G.phase === "set" && !amSitter()) || (G.phase === "sit" && amSitter());
-  if (!myTurn) return;
+  if (G.phase !== "set" && G.phase !== "sit") return;
   picked = i;
   sndSelect(); vib(15);
-  refreshChairs(false);
+  refreshChairs();
   document.getElementById("confirm-btn").disabled = false;
 }
 
-function confirmTrap() {
-  if (picked == null) return;
-  if (isHost) {
-    hostTrap = picked;
-    G.phase = "sit";
-    sendState(); enterPhase();
-  } else {
-    send({ t: "setTrap", chair: picked });
-    // ホストからのstateで画面遷移
-  }
-}
-function confirmSit() {
-  if (picked == null) return;
-  if (isHost) hostResolveSit(picked);
-  else send({ t: "sit", chair: picked });
-}
-
-/* ---------- 野球ボード式スコア ---------- */
 function renderAll() {
   renderBoard();
   document.getElementById("roundlabel").textContent =
@@ -747,8 +512,8 @@ function renderBoard() {
   rounds.forEach(r => html += "<th>R" + r + "</th>");
   html += "<th class='total'>計</th><th class='shockcol'>感電</th></tr></thead><tbody>";
   for (let i = 0; i < 2; i++) {
-    const turnMark = (G.phase !== "over" &&
-      ((G.phase === "sit" && G.sitter === i) || (G.phase === "set" && G.sitter !== i))) ? " turn" : "";
+    const actor = (G.phase === "sit" || G.phase === "reveal") ? G.sitter : 1 - G.sitter;
+    const turnMark = (G.phase !== "over" && actor === i) ? " turn" : "";
     html += "<tr><td class='nm" + turnMark + "'>" + esc(p[i].name) + "</td>";
     rounds.forEach(r => {
       const h = p[i].hist[r];
@@ -763,28 +528,25 @@ function renderBoard() {
   html += "</tbody>";
   const t = document.getElementById("board");
   t.innerHTML = html;
-  t.parentElement.scrollLeft = t.parentElement.scrollWidth;  // 最新ラウンドへ
+  t.parentElement.scrollLeft = t.parentElement.scrollWidth;
 }
-function esc(s) { return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
 /* =====================================================
-   リビール演出（両画面同時）
+   リビール演出
    ===================================================== */
-function playReveal(chair, trap, outcome) {
-  revealPlaying = true;
-  show("game");
-  renderAll(); refreshChairs(true);
+function playReveal(chair, outcome) {
+  renderAll(); refreshChairs();
   document.getElementById("sus-chair").textContent = "🪑 " + chair;
   document.getElementById("suspense").classList.add("active");
   sndHeartbeat(3); vib([40, 500, 40, 500, 40]);
   setTimeout(() => {
     document.getElementById("suspense").classList.remove("active");
-    if (outcome === "zap") animZap(chair, trap);
-    else animSafe(chair, trap);
+    if (outcome === "zap") animZap(chair);
+    else animSafe(chair);
   }, 2400);
 }
 
-function animZap(chair, trap) {
+function animZap(chair) {
   sndZap();
   vib([150, 60, 150, 60, 150, 60, 500]);
   const flash = document.getElementById("flash");
@@ -810,7 +572,7 @@ function animZap(chair, trap) {
   }, 1600);
 }
 
-function animSafe(chair, trap) {
+function animSafe(chair) {
   sndSafe(); vib(60);
   const el = document.getElementById("chair" + chair);
   if (el) {
@@ -819,79 +581,59 @@ function animSafe(chair, trap) {
     pt.className = "float-pt";
     pt.textContent = "+" + chair + "点";
     const rect = el.getBoundingClientRect();
-    pt.style.left = Math.max(4, rect.left + rect.width/2 - 30) + "px";
-    pt.style.top = Math.max(4, rect.top - 8) + "px";
-    document.body.appendChild(pt);
-    setTimeout(() => pt.remove(), 1400);
+    if (rect) {
+      pt.style.left = Math.max(4, rect.left + rect.width/2 - 30) + "px";
+      pt.style.top = Math.max(4, rect.top - 8) + "px";
+      document.body.appendChild(pt);
+      setTimeout(() => pt.remove(), 1400);
+    }
   }
   setTimeout(showResultCard, 1300);
 }
 
 function showResultCard() {
-  revealPlaying = false;
   if (!G.lastReveal) return;
-  const { chair, trap, outcome, sitter } = G.lastReveal;
+  const { chair, trap: t, outcome, sitter } = G.lastReveal;
   const sname = esc(G.players[sitter].name);
   renderAll();
   const em = document.getElementById("r-emoji");
-  const t = document.getElementById("r-title");
+  const ti = document.getElementById("r-title");
   const d = document.getElementById("r-detail");
   if (outcome === "zap") {
     em.textContent = "💥";
-    t.textContent = "ビリビリ！！";
-    t.className = "r-title zap-t";
+    ti.textContent = "ビリビリ！！";
+    ti.className = "r-title zap-t";
     d.innerHTML = sname + " が<b>感電</b>！（" + G.players[sitter].shocks + "回目）<br>椅子 " + chair + " には電流が流れていた…";
   } else {
     em.textContent = "🎉";
-    t.textContent = "セーフ！";
-    t.className = "r-title safe-t";
-    d.innerHTML = sname + " が <b>+" + chair + "点</b> 獲得！（合計 " + G.players[sitter].score + "点）<br>電流は椅子 " + trap + " に仕掛けられていた";
+    ti.textContent = "セーフ！";
+    ti.className = "r-title safe-t";
+    d.innerHTML = sname + " が <b>+" + chair + "点</b> 獲得！（合計 " + G.players[sitter].score + "点）<br>電流は椅子 " + t + " に仕掛けられていた";
   }
   document.getElementById("result").classList.add("active");
-}
-
-function tapNext() {
-  document.getElementById("result").classList.remove("active");
-  if (isHost) hostNext();
-  else send({ t: "next" });
 }
 
 /* =====================================================
    勝敗・再戦
    ===================================================== */
-function finishOrWinner() {
-  // reveal演出中なら終わってから表示
-  if (revealPlaying) { setTimeout(finishOrWinner, 500); return; }
-  document.getElementById("result").classList.remove("active");
-  showWinner();
-}
 function showWinner() {
   const p = G.players;
-  sndFanfare();
-  const iWon = G.winner === myIdx;
-  document.getElementById("w-trophy").textContent = G.winner === -1 ? "🤝" : (iWon ? "🏆" : "😵");
+  sndFanfare(); vib([100, 50, 100, 50, 300]);
+  document.getElementById("w-trophy").textContent = G.winner === -1 ? "🤝" : "🏆";
   document.getElementById("w-name").textContent =
     G.winner === -1 ? "引き分け！" : p[G.winner].name + " の勝利！";
   document.getElementById("w-why").textContent = G.winWhy;
   document.getElementById("w-final").innerHTML =
     esc(p[0].name) + "：" + p[0].score + "点 / 感電" + p[0].shocks + "回<br>" +
     esc(p[1].name) + "：" + p[1].score + "点 / 感電" + p[1].shocks + "回";
-  document.getElementById("w-wait").textContent = "";
-  if (iWon) vib([100, 50, 100, 50, 300]);
   show("winner");
 }
-function tapRematch() {
-  document.getElementById("w-wait").textContent = "再戦を開始しています…";
-  if (isHost) hostRematch();
-  else send({ t: "rematch" });
+function rematch() {
+  const n0 = G.players[0].name, n1 = G.players[1].name;
+  G = newGame(n0, n1);
+  trap = null;
+  toSetPhase();
 }
-
-/* ---------- 初期化 ---------- */
-window.createRoom = createRoom;
-window.joinRoom = joinRoom;
-window.tapNext = tapNext;
-window.tapRematch = tapRematch;
-buildChairs();
 </script>
 </body>
 </html>
