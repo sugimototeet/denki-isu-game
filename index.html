@@ -711,7 +711,7 @@ function renderBoard() {
   t.innerHTML = html;
   t.parentElement.scrollLeft = t.parentElement.scrollWidth;  // 最新ラウンドへ
 }
-function esc(s) { return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"<",">":">",'"':","'":"&#39;"}[c])); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
 /* =====================================================
    リビール演出（両画面同時）
@@ -837,4 +837,3 @@ buildChairs();
 </script>
 </body>
 </html>
-
